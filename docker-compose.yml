@@ -1,0 +1,47 @@
+version: '3'
+services:
+  broker:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    env_file: env
+  web:
+    # image: gbkim1988/shred:0.4.2
+    # image: xiired_web
+    image: gbkim1988/xiired_web:0.1
+    # build: ./xii/
+    # restart: always
+    env_file: env
+    ports:
+      - "8282:8282"
+      - "5555:5555"
+    # depends_on:
+    #   - postgres
+    # links:
+    #  - postgres:postgres
+    #  - broker:broker
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    env_file: env
+  worker:
+    image: gbkim1988/xiired_worker:0.1
+    # build: ./worker/
+    environment:
+      PYTHONUNBUFFERED: 1
+      REDIS_SETTING: redis://192.168.2.195:6379
+      BACKEND_SETTING: redis://192.168.2.195:6379
+      KAFKA_SETTING:  192.168.2.196:9092,192.168.2.197:9092,192.168.2.198:9092
+      KAFKA_TOPIC_SETTING: dba
+    depends_on:
+      - broker
+    command: > 
+      sh -c "ls -al /app/worker
+        cat /app/worker/entrypoint.sh &
+        sh /app/worker/entrypoint.sh"
+    # command: > 
+    #   sh -c 'celery -A worker worker  -l info -b'
+    deploy:
+      mode: replicated
+      replicas: 10
